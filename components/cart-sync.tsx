@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { useCart } from '@/store/use-cart'
 import { mergeCarts } from '@/lib/cart-utils'
+import { toast } from 'sonner'
 
 export const CartSync = () => {
     const { isLoaded, isSignedIn, user } = useUser()
@@ -33,8 +34,10 @@ export const CartSync = () => {
                         setItems(data.items)
                     }
                 }
-            } catch (err) {
-                console.error('Failed to pull cloud cart:', err)
+            } catch {
+                toast.error('Cart Sync Failed', {
+                    description: 'Unable to load your saved cart. Please try refreshing the page.',
+                })
             } finally {
                 setHasPulled(true)
             }
@@ -62,8 +65,10 @@ export const CartSync = () => {
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ items })
                     })
-                } catch (err) {
-                    console.error('Failed to sync cart to cloud:', err)
+                } catch {
+                    toast.error('Cart Sync Failed', {
+                        description: 'Unable to save your cart. Changes may not persist across devices.',
+                    })
                 }
             }, 2000)
 

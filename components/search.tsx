@@ -11,6 +11,7 @@ import { client } from '@/sanity/lib/client'
 import { SEARCH_PRODUCTS_QUERY } from '@/sanity/lib/queries'
 import { SEARCH_DEBOUNCE_MS } from '@/lib/constants'
 import type { QueryParams } from 'next-sanity'
+import { toast } from 'sonner'
 
 const searchStyles = tv({
     slots: {
@@ -60,7 +61,9 @@ export const SearchOverlay = () => {
                 })
             } catch (err) {
                 if (err instanceof Error && err.name === 'AbortError') return
-                console.error('Search error:', err)
+                toast.error('Search Failed', {
+                    description: 'Unable to search for products. Please try again.',
+                })
             } finally {
                 setIsSearching(false)
             }

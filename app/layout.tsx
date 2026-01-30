@@ -4,6 +4,7 @@ import "./globals.css";
 import { Header } from "@/components/header";
 import { ClerkProvider } from '@clerk/nextjs';
 import { DynamicImports } from '@/components/layouts/dynamic';
+import { Toaster } from 'sonner';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -82,6 +83,18 @@ export default function RootLayout({
           <Header />
           {children}
           <DynamicImports />
+          <Toaster 
+            position="top-right"
+            richColors
+            closeButton
+            toastOptions={{
+              style: {
+                background: '#18181b',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                color: '#fff',
+              },
+            }}
+          />
         </body>
       </html>
     </ClerkProvider>

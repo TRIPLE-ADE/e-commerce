@@ -7,6 +7,7 @@ import { tv } from 'tailwind-variants'
 import Image from 'next/image'
 import React from 'react'
 import { useUser } from '@clerk/nextjs'
+import { toast } from 'sonner'
 
 const sidebarStyles = tv({
     slots: {
@@ -51,7 +52,9 @@ export const CartSidebar = () => {
 
     const handleCheckout = () => {
         if (!isSignedIn) {
-            alert('Please sign in to proceed with checkout.')
+            toast.error('Authentication Required', {
+                description: 'Please sign in to proceed with checkout.',
+            })
             return
         }
         startTransition(async () => {
@@ -68,14 +71,19 @@ export const CartSidebar = () => {
                 } else {
                     if (data.code === 'OUT_OF_STOCK' && data.items) {
                         const outOfStockNames = data.items.map((item: { name: string }) => item.name).join(', ')
-                        alert(`The following items are out of stock or have insufficient quantity: ${outOfStockNames}. Please remove them from your cart and try again.`)
+                        toast.error('Out of Stock', {
+                            description: `The following items are out of stock or have insufficient quantity: ${outOfStockNames}. Please remove them from your cart and try again.`,
+                            duration: 6000,
+                        })
                     } else {
                         throw new Error(data.error || 'Failed to create checkout session')
                     }
                 }
             } catch (error) {
                 const message = error instanceof Error ? error.message : 'Something went wrong during checkout'
-                alert(message)
+                toast.error('Checkout Failed', {
+                    description: message,
+                })
             }
         })
     }

@@ -8,6 +8,7 @@ import Link from 'next/link'
 import confetti from 'canvas-confetti'
 import { useSearchParams, useRouter } from 'next/navigation'
 import type { CheckoutSessionData, CheckoutLineItem } from '@/types/checkout'
+import { toast } from 'sonner'
 
 export const Success = () => {
     const router = useRouter()
@@ -50,9 +51,19 @@ export const Success = () => {
 
                 if (!data.error) {
                     setOrderData(data as CheckoutSessionData)
+                    toast.success('Order Confirmed', {
+                        description: 'Your order has been successfully processed!',
+                        duration: 5000,
+                    })
+                } else {
+                    toast.error('Order Verification Failed', {
+                        description: 'Unable to verify your order. Please contact support if you were charged.',
+                    })
                 }
             } catch {
-                // Error is handled by error boundary or logged on server
+                toast.error('Order Verification Failed', {
+                    description: 'Unable to verify your order. Please contact support if you were charged.',
+                })
                 router.replace('/shop')
             }
         })
