@@ -1,12 +1,12 @@
 'use client'
 
-import React from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { X, ShoppingBag, Plus, Minus, Trash2 } from 'lucide-react'
 import { useCart } from '@/store/use-cart'
 import { tv } from 'tailwind-variants'
-import { useRouter } from 'next/navigation'
 import Image from 'next/image'
+import React from 'react'
+import { useUser } from '@clerk/nextjs'
 
 const sidebarStyles = tv({
     slots: {
@@ -33,19 +33,19 @@ const sidebarStyles = tv({
 })
 
 export const CartSidebar = () => {
-    const router = useRouter()
     const {
         overlay, panel, header, title, closeBtn, content, item: itemStyle,
         itemImage, itemDetails, itemName, itemVariant, itemPrice, controls,
         controlBtn, footer, summaryRow, totalRow, checkoutBtn, empty
     } = sidebarStyles()
-
     const items = useCart((state) => state.items)
     const updateQuantity = useCart((state) => state.updateQuantity)
     const removeItem = useCart((state) => state.removeItem)
-    const totalPrice = useCart((state) => state.totalPrice)
+    const totalPrice = useCart((state) => state.items.reduce((acc, item) => acc + item.price * item.quantity, 0))
     const isOpen = useCart((state) => state.isOpen)
     const setIsOpen = useCart((state) => state.setIsOpen)
+    const [isPending, startTransition] = React.useTransition()
+    const { isSignedIn } = useUser()
 
     const onClose = () => setIsOpen(false)
 
@@ -70,6 +70,11 @@ export const CartSidebar = () => {
                         role="dialog"
                         aria-modal="true"
                         aria-label="Shopping Cart"
+                        onKeyDown={(e) => {
+                            if (e.key === 'Escape') {
+                                setIsOpen(false)
+                            }
+                        }}
                     >
                         <div className={header()}>
                             <h2 className={title()}>
@@ -156,7 +161,7 @@ export const CartSidebar = () => {
                             <div className={footer()}>
                                 <div className={summaryRow()}>
                                     <span>Subtotal</span>
-                                    <span>${totalPrice().toLocaleString()}</span>
+                                    <span>${totalPrice.toLocaleString()}</span>
                                 </div>
                                 <div className={summaryRow()}>
                                     <span>Shipping</span>
@@ -164,16 +169,39 @@ export const CartSidebar = () => {
                                 </div>
                                 <div className={totalRow()}>
                                     <span>Total</span>
-                                    <span>${totalPrice().toLocaleString()}</span>
+                                    <span>${totalPrice.toLocaleString()}</span>
                                 </div>
                                 <button
+                                    disabled={isPending}
                                     onClick={() => {
-                                        onClose()
-                                        router.push('/success')
+                                        if (!isSignedIn) {
+                                            alert('Please sign in to proceed with checkout.')
+                                            return
+                                        }
+
+                                        startTransition(async () => {
+                                            try {
+                                                const response = await fetch('/api/checkout', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ items }),
+                                                })
+                                                const data = await response.json()
+
+                                                if (data.url) {
+                                                    window.location.href = data.url
+                                                } else {
+                                                    throw new Error(data.error || 'Failed to create checkout session')
+                                                }
+                                            } catch (error) {
+                                                const message = error instanceof Error ? error.message : 'Something went wrong during checkout'
+                                                alert(message)
+                                            }
+                                        })
                                     }}
-                                    className={checkoutBtn()}
+                                    className={`${checkoutBtn()} ${isPending ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 >
-                                    Proceed to Checkout
+                                    {isPending ? 'Preparing Checkout...' : 'Proceed to Checkout'}
                                 </button>
                             </div>
                         )}

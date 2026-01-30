@@ -1,14 +1,13 @@
 'use client'
 
 import React, { Suspense } from 'react'
-import { motion, AnimatePresence } from 'motion/react'
+import { AnimatePresence } from 'motion/react'
 import { useCart } from '@/store/use-cart'
-import { Product, MOCK_PRODUCTS } from '@/data/products'
+import type { Product } from '@/types/product'
 import { tv } from 'tailwind-variants'
-import { ShoppingCart, Eye, Star, ChevronDown, SlidersHorizontal } from 'lucide-react'
-import Link from 'next/link'
-import Image from 'next/image'
+import { ChevronDown, SlidersHorizontal } from 'lucide-react'
 import { ProductGridSkeleton } from '@/components/product-skeleton'
+import { ProductCard } from '@/components/product-card'
 
 const shopStyles = tv({
     slots: {
@@ -24,73 +23,11 @@ const shopStyles = tv({
         controls: 'flex items-center gap-4',
         sortSelect: 'bg-zinc-900 border border-white/5 rounded-xl px-4 py-2.5 text-sm font-medium text-white focus:outline-none focus:border-emerald-500/50 transition-all appearance-none cursor-pointer pr-10 relative',
         grid: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8',
-        card: 'group relative bg-zinc-950 border border-white/5 rounded-2xl overflow-hidden hover:border-emerald-500/30 transition-all duration-500',
-        cardImageWrapper: 'aspect-square overflow-hidden bg-zinc-900 relative block w-full',
-        cardImage: 'object-cover transition-transform duration-700 group-hover:scale-110 opacity-80 group-hover:opacity-100',
-        cardContent: 'p-6 space-y-4',
-        cardTitle: 'text-xl font-bold text-white',
-        cardPrice: 'text-emerald-400 font-mono font-bold',
-        cardActions: 'flex gap-2 opacity-0 transform translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300',
-        buttonPrimary: 'flex-1 bg-white text-black py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-emerald-400 transition-colors',
-        buttonIcon: 'p-3 bg-zinc-900 text-white rounded-xl hover:bg-zinc-800 transition-colors',
         activeFilter: 'text-emerald-500 font-bold'
     }
 })
 
-const ProductCard = ({ product, onAdd }: { product: Product, onAdd: (p: Product, e: React.MouseEvent) => void }) => {
-    const { card, cardImageWrapper, cardImage, cardContent, cardTitle, cardPrice, cardActions, buttonPrimary, buttonIcon } = shopStyles()
-
-    return (
-        <motion.div
-            layout
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className={card()}
-        >
-            <Link href={`/product/${product.id}`} className={cardImageWrapper()}>
-                <Image
-                    src={product.image}
-                    alt={product.name}
-                    fill
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                    className={cardImage()}
-                />
-            </Link>
-            <div className={cardContent()}>
-                <div className="flex justify-between items-start">
-                    <Link href={`/product/${product.id}`} className="hover:text-emerald-400 transition-colors text-left">
-                        <h3 className={cardTitle()}>{product.name}</h3>
-                    </Link>
-                    <div className="flex items-center gap-1 text-xs text-zinc-500">
-                        <Star size={12} fill="currentColor" className="text-emerald-500" />
-                        {product.rating}
-                    </div>
-                </div>
-                <p className={cardPrice()}>${product.price}</p>
-                <div className={cardActions()}>
-                    <button
-                        onClick={(e) => onAdd(product, e)}
-                        className={buttonPrimary()}
-                        aria-label={`Add ${product.name} to bag`}
-                    >
-                        <ShoppingCart size={18} />
-                        Add
-                    </button>
-                    <Link
-                        href={`/product/${product.id}`}
-                        className={buttonIcon()}
-                        aria-label={`View ${product.name} details`}
-                    >
-                        <Eye size={18} />
-                    </Link>
-                </div>
-            </div>
-        </motion.div>
-    )
-}
-
-export const Shop = () => {
+export const Shop = ({ products }: { products: Product[] }) => {
     const addItem = useCart(state => state.addItem)
     const setFlyingItem = useCart(state => state.setFlyingItem)
     const setIsOpen = useCart(state => state.setIsOpen)
@@ -101,23 +38,23 @@ export const Shop = () => {
 
     const { container, sidebar, sidebarSection, sidebarTitle, filterBtn, mainContent, header, title, subtitle, sortSelect, grid, activeFilter } = shopStyles()
 
-    const categories = Array.from(new Set(MOCK_PRODUCTS.map(p => p.category)))
+    const categories = Array.from(new Set(products.map(p => p.category)))
 
     const filteredAndSortedProducts = React.useMemo(() => {
-        let products = [...MOCK_PRODUCTS]
+        let filtered = [...products]
 
         if (selectedCategory) {
-            products = products.filter(p => p.category === selectedCategory)
+            filtered = filtered.filter(p => p.category === selectedCategory)
         }
 
-        products = products.filter(p => p.price >= priceRange[0] && p.price <= priceRange[1])
+        filtered = filtered.filter(p => p.price >= priceRange[0] && p.price <= priceRange[1])
 
-        if (sortBy === 'price-asc') products.sort((a, b) => a.price - b.price)
-        if (sortBy === 'price-desc') products.sort((a, b) => b.price - a.price)
-        if (sortBy === 'rating') products.sort((a, b) => (b.rating || 0) - (a.rating || 0))
+        if (sortBy === 'price-asc') filtered.sort((a, b) => a.price - b.price)
+        if (sortBy === 'price-desc') filtered.sort((a, b) => b.price - a.price)
+        if (sortBy === 'rating') filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0))
 
-        return products
-    }, [selectedCategory, sortBy, priceRange])
+        return filtered
+    }, [products, selectedCategory, sortBy, priceRange])
 
     const handleAddToCart = (product: Product, e: React.MouseEvent) => {
         setFlyingItem({
@@ -200,11 +137,17 @@ export const Shop = () => {
                         </div>
                     </header>
 
-                    <Suspense fallback={<ProductGridSkeleton />}>
+                    <Suspense fallback={<ProductGridSkeleton count={3}/>}>
                         <div className={grid()}>
                             <AnimatePresence mode="popLayout">
                                 {filteredAndSortedProducts.map((product) => (
-                                    <ProductCard key={product.id} product={product} onAdd={handleAddToCart} />
+                                    <ProductCard 
+                                        key={product.id} 
+                                        product={product} 
+                                        onAdd={handleAddToCart}
+                                        animationVariant="layout"
+                                        imageSizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                                    />
                                 ))}
                             </AnimatePresence>
                         </div>

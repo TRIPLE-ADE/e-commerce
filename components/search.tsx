@@ -1,13 +1,16 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { Search, X, Command, ArrowRight } from 'lucide-react'
+import { Search, X, Command, ArrowRight, Loader2 } from 'lucide-react'
 import { useCart } from '@/store/use-cart'
-import { MOCK_PRODUCTS, Product } from '@/data/products'
 import { tv } from 'tailwind-variants'
 import Image from 'next/image'
 import Link from 'next/link'
+import { client } from '@/sanity/lib/client'
+import { SEARCH_PRODUCTS_QUERY } from '@/sanity/lib/queries'
+import { SEARCH_DEBOUNCE_MS } from '@/lib/constants'
+import type { QueryParams } from 'next-sanity'
 
 const searchStyles = tv({
     slots: {
@@ -29,30 +32,47 @@ const searchStyles = tv({
 export const SearchOverlay = () => {
     const isSearchOpen = useCart((state) => state.isSearchOpen)
     const setIsSearchOpen = useCart((state) => state.setIsSearchOpen)
-    const [query, setQuery] = React.useState('')
-    const inputRef = React.useRef<HTMLInputElement>(null)
-    const { overlay, container, header, input, results, item: itemStyle, itemImage, itemInfo, itemName, itemPrice, footer, shortcut } = searchStyles()
+    const [query, setQuery] = useState('')
+    const [results, setResults] = useState<Array<{ id: string; name: string; price: number; image: string }>>([])
+    const [isSearching, setIsSearching] = useState(false)
+    const [isPending, startTransition] = React.useTransition()
+    const inputRef = useRef<HTMLInputElement>(null)
+    const { overlay, container, header, input, results: resultsStyle, item: itemStyle, itemImage, itemInfo, itemName, itemPrice, footer, shortcut } = searchStyles()
 
-    const filteredProducts = React.useMemo(() => {
-        if (!query) return []
-        return MOCK_PRODUCTS.filter(p =>
-            p.name.toLowerCase().includes(query.toLowerCase()) ||
-            p.description?.toLowerCase().includes(query.toLowerCase())
-        ).slice(0, 5)
+    useEffect(() => {
+        if (!query.trim()) {
+            setResults([])
+            return
+        }
+
+        const controller = new AbortController()
+        setIsSearching(true)
+
+        const timeoutId = setTimeout(async () => {
+            try {
+                const data = await client.fetch<Array<{ id: string; name: string; price: number; image: string }>>(
+                    SEARCH_PRODUCTS_QUERY,
+                    { query: `${query}*` } as unknown as QueryParams,
+                    { signal: controller.signal }
+                )
+                startTransition(() => {
+                    setResults(data)
+                })
+            } catch (err) {
+                if (err instanceof Error && err.name === 'AbortError') return
+                console.error('Search error:', err)
+            } finally {
+                setIsSearching(false)
+            }
+        }, SEARCH_DEBOUNCE_MS)
+
+        return () => {
+            clearTimeout(timeoutId)
+            controller.abort()
+        }
     }, [query])
 
-    React.useEffect(() => {
-        if (isSearchOpen) {
-            setTimeout(() => inputRef.current?.focus(), 100)
-            document.body.style.overflow = 'hidden'
-        } else {
-            document.body.style.overflow = 'auto'
-            setQuery('')
-        }
-    }, [isSearchOpen])
-
-    // Keyboard shortcuts
-    React.useEffect(() => {
+    useEffect(() => {
         const handleKeys = (e: KeyboardEvent) => {
             if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault()
@@ -83,19 +103,27 @@ export const SearchOverlay = () => {
                         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
                         className={container()}
                         onClick={(e) => e.stopPropagation()}
+                        onAnimationComplete={() => {
+                            if (isSearchOpen) inputRef.current?.focus()
+                        }}
                     >
                         <div className={header()}>
                             <div className="flex items-center gap-2 font-mono text-xs uppercase tracking-widest bg-emerald-500/10 text-emerald-500 px-2 py-1 rounded border border-emerald-500/20">
                                 Triplex-OS
                             </div>
-                            <Search className="text-zinc-500" size={20} />
+                            {isSearching || isPending ? <Loader2 className="animate-spin text-emerald-500" size={20} /> : <Search className="text-zinc-500" size={20} />}
                             <input
                                 ref={inputRef}
                                 className={input()}
                                 placeholder="Search collection..."
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
+                                aria-label="Search products"
+                                aria-describedby="search-results-status"
                             />
+                            <span id="search-results-status" className="sr-only">
+                                {isPending ? 'Searching...' : results.length > 0 ? `${results.length} results found` : query ? 'No results found' : ''}
+                            </span>
                             <button
                                 onClick={() => setIsSearchOpen(false)}
                                 className="p-2 hover:bg-white/5 rounded-full transition-colors"
@@ -104,7 +132,13 @@ export const SearchOverlay = () => {
                             </button>
                         </div>
 
-                        <div className={results()}>
+                        <div 
+                            className={resultsStyle({ className: isPending ? 'opacity-50 transition-opacity duration-200' : 'transition-opacity duration-200' })}
+                            role="region"
+                            aria-label="Search results"
+                            aria-live="polite"
+                            aria-busy={isPending}
+                        >
                             {!query ? (
                                 <div className="space-y-8 p-6">
                                     <div className="text-center space-y-4 py-8">
@@ -120,7 +154,7 @@ export const SearchOverlay = () => {
                                     <div className="space-y-3">
                                         <p className="text-[10px] uppercase font-bold tracking-widest text-zinc-600 px-2">Popular Searches</p>
                                         <div className="flex flex-wrap gap-2 px-2">
-                                            {['Neural Link', 'Void Watch', 'Gravity', 'Holo Lens'].map(s => (
+                                            {['Heads-up', 'Audio', 'Wearables'].map(s => (
                                                 <button
                                                     key={s}
                                                     onClick={() => setQuery(s)}
@@ -132,14 +166,14 @@ export const SearchOverlay = () => {
                                         </div>
                                     </div>
                                 </div>
-                            ) : filteredProducts.length === 0 ? (
+                            ) : results.length === 0 && !isSearching ? (
                                 <div className="p-12 text-center text-zinc-500 italic">
-                                    No records found matching "{query}"
+                                    No records found matching &quot;{query}&quot;
                                 </div>
                             ) : (
                                 <div className="space-y-2">
-                                    <p className="px-2 text-[10px] uppercase font-bold tracking-widest text-zinc-500 mb-2">Relevant Results ({filteredProducts.length})</p>
-                                    {filteredProducts.map((p) => (
+                                    <p className="px-2 text-[10px] uppercase font-bold tracking-widest text-zinc-500 mb-2">Relevant Results ({results.length})</p>
+                                    {results.map((p) => (
                                         <Link
                                             key={p.id}
                                             href={`/product/${p.id}`}

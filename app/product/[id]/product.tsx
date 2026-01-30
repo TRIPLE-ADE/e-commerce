@@ -1,14 +1,13 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import { motion } from 'motion/react'
 import { useCart } from '@/store/use-cart'
-import { MOCK_PRODUCTS } from '@/data/products'
 import { ArrowLeft, Star, ShoppingCart, ShieldCheck, Truck, RotateCcw } from 'lucide-react'
 import { tv } from 'tailwind-variants'
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
 import Image from 'next/image'
+import type { Product } from '@/types/product'
 
 const productStyles = tv({
     slots: {
@@ -34,22 +33,16 @@ const productStyles = tv({
     }
 })
 
-export const ProductPage = () => {
-    const { id } = useParams()
-    const product = MOCK_PRODUCTS.find(p => p.id === id)
-    const [selectedVariant, setSelectedVariant] = React.useState(product?.variant || 'Standard')
-    const [activeImage, setActiveImage] = React.useState(product?.image)
-    const [isZooming, setIsZooming] = React.useState(false)
-    const [mousePos, setMousePos] = React.useState({ x: 0, y: 0 })
+export const ProductPage = ({ product }: { product: Product }) => {
+
+    const [selectedVariant, setSelectedVariant] = useState(product?.variant || 'Standard')
+    const [activeImage, setActiveImage] = useState(product?.image)
+    const [isZooming, setIsZooming] = useState(false)
+    const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
 
     const addItem = useCart(state => state.addItem)
     const setFlyingItem = useCart(state => state.setFlyingItem)
     const setIsOpen = useCart(state => state.setIsOpen)
-
-    // Ensure activeImage is set when product loads
-    React.useEffect(() => {
-        if (product && !activeImage) setActiveImage(product.image)
-    }, [product, activeImage])
 
     const {
         container, imageSection, imageWrapper, image: imageStyle, thumbnailGrid, thumbnailBtn, thumbnailActive, thumbnailInactive,
@@ -88,8 +81,38 @@ export const ProductPage = () => {
         ? product.images
         : [product.image]
 
+    // JSON-LD structured data for SEO
+    const jsonLd = {
+        '@context': 'https://schema.org/',
+        '@type': 'Product',
+        name: product.name,
+        description: product.description,
+        image: product.images && product.images.length > 0 ? product.images : [product.image],
+        brand: {
+            '@type': 'Brand',
+            name: 'Triplex',
+        },
+        offers: {
+            '@type': 'Offer',
+            url: `${typeof window !== 'undefined' ? window.location.href : ''}/product/${product.id}`,
+            priceCurrency: 'USD',
+            price: product.price,
+            availability: product.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+            itemCondition: 'https://schema.org/NewCondition',
+        },
+        aggregateRating: product.rating ? {
+            '@type': 'AggregateRating',
+            ratingValue: product.rating,
+            reviewCount: product.reviews || 0,
+        } : undefined,
+    }
+
     return (
         <main className="bg-black min-h-screen">
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+            />
             <div className={container()}>
                 {/* Left: Images */}
                 <div className={imageSection()}>

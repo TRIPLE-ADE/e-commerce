@@ -1,7 +1,5 @@
 'use client'
 
-import React from 'react'
-
 export const ProductSkeleton = () => {
     return (
         <div className="bg-zinc-950 border border-white/5 rounded-2xl overflow-hidden animate-pulse">
@@ -21,10 +19,10 @@ export const ProductSkeleton = () => {
     )
 }
 
-export const ProductGridSkeleton = () => {
+export const ProductGridSkeleton = ({ count = 4 }: { count?: number }) => {
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {Array.from({ length: 4 }).map((_, i) => (
+        <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-${count} gap-8`}>
+            {Array.from({ length: count }).map((_, i) => (
                 <ProductSkeleton key={i} />
             ))}
         </div>

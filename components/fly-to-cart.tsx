@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { useCart } from '@/store/use-cart'
 import Image from 'next/image'
@@ -8,11 +8,10 @@ import Image from 'next/image'
 export const FlyToCart = () => {
     const flyingItem = useCart((state) => state.flyingItem)
     const setFlyingItem = useCart((state) => state.setFlyingItem)
-    const [targetPos, setTargetPos] = React.useState({ x: 0, y: 0 })
+    const [targetPos, setTargetPos] = useState({ x: 0, y: 0 })
 
-    React.useEffect(() => {
+    useEffect(() => {
         const updateTarget = () => {
-            // Find the cart icon in the header (we'll add an ID to it)
             const cartBtn = document.getElementById('cart-button')
             if (cartBtn) {
                 const rect = cartBtn.getBoundingClientRect()
@@ -24,7 +23,7 @@ export const FlyToCart = () => {
         }
 
         updateTarget()
-        window.addEventListener('resize', updateTarget)
+        window.addEventListener('resize', updateTarget, { passive: true })
         return () => window.removeEventListener('resize', updateTarget)
     }, [])
 
