@@ -65,7 +65,12 @@ export const ProductPage = ({ product }: { product: Product }) => {
         setMousePos({ x, y })
     }
 
+    const isOutOfStock = (product.stock ?? 0) <= 0
+
     const handleAddToCart = (e: React.MouseEvent) => {
+        if (isOutOfStock) {
+            return
+        }
         setFlyingItem({
             id: product.id,
             x: e.clientX,
@@ -200,10 +205,19 @@ export const ProductPage = ({ product }: { product: Product }) => {
                         </div>
                     </div>
 
-                    <button onClick={handleAddToCart} className={ctaBtn()}>
+                    <button 
+                        onClick={handleAddToCart} 
+                        disabled={isOutOfStock}
+                        className={`${ctaBtn()} ${isOutOfStock ? 'opacity-50 cursor-not-allowed bg-zinc-800 text-zinc-500 hover:bg-zinc-800' : ''}`}
+                    >
                         <ShoppingCart size={24} />
-                        Add to Bag
+                        {isOutOfStock ? 'Out of Stock' : 'Add to Bag'}
                     </button>
+                    {isOutOfStock && (
+                        <p className="text-red-500 text-sm font-medium text-center">
+                            This product is currently out of stock
+                        </p>
+                    )}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className={featureItem()}>

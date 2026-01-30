@@ -24,4 +24,5 @@ export const ERROR_MESSAGES = {
   CART_EMPTY: 'Cart is empty',
   PRODUCT_NOT_FOUND: 'Product not found',
   INVALID_INPUT: 'Invalid input provided',
+  OUT_OF_STOCK: 'Product is out of stock',
 } as const

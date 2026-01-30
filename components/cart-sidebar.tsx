@@ -49,6 +49,37 @@ export const CartSidebar = () => {
 
     const onClose = () => setIsOpen(false)
 
+    const handleCheckout = () => {
+        if (!isSignedIn) {
+            alert('Please sign in to proceed with checkout.')
+            return
+        }
+        startTransition(async () => {
+            try {
+                const response = await fetch('/api/checkout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ items }),
+                })
+                const data = await response.json()
+
+                if (data.url) {
+                    window.location.href = data.url
+                } else {
+                    if (data.code === 'OUT_OF_STOCK' && data.items) {
+                        const outOfStockNames = data.items.map((item: { name: string }) => item.name).join(', ')
+                        alert(`The following items are out of stock or have insufficient quantity: ${outOfStockNames}. Please remove them from your cart and try again.`)
+                    } else {
+                        throw new Error(data.error || 'Failed to create checkout session')
+                    }
+                }
+            } catch (error) {
+                const message = error instanceof Error ? error.message : 'Something went wrong during checkout'
+                alert(message)
+            }
+        })
+    }
+
     return (
         <AnimatePresence>
             {isOpen && (
@@ -173,32 +204,7 @@ export const CartSidebar = () => {
                                 </div>
                                 <button
                                     disabled={isPending}
-                                    onClick={() => {
-                                        if (!isSignedIn) {
-                                            alert('Please sign in to proceed with checkout.')
-                                            return
-                                        }
-
-                                        startTransition(async () => {
-                                            try {
-                                                const response = await fetch('/api/checkout', {
-                                                    method: 'POST',
-                                                    headers: { 'Content-Type': 'application/json' },
-                                                    body: JSON.stringify({ items }),
-                                                })
-                                                const data = await response.json()
-
-                                                if (data.url) {
-                                                    window.location.href = data.url
-                                                } else {
-                                                    throw new Error(data.error || 'Failed to create checkout session')
-                                                }
-                                            } catch (error) {
-                                                const message = error instanceof Error ? error.message : 'Something went wrong during checkout'
-                                                alert(message)
-                                            }
-                                        })
-                                    }}
+                                    onClick={handleCheckout}
                                     className={`${checkoutBtn()} ${isPending ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 >
                                     {isPending ? 'Preparing Checkout...' : 'Proceed to Checkout'}

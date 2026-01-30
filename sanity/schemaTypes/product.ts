@@ -54,6 +54,7 @@ export const productType = defineType({
             name: 'stock',
             title: 'Stock Level',
             type: 'number',
+            validation: (Rule) => Rule.min(0).error('Stock level must be at least 0'),
         }),
         defineField({
             name: 'variant',

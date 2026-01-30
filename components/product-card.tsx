@@ -47,6 +47,7 @@ export function ProductCard({
     const { card, cardImageWrapper, cardImage, cardContent, cardTitle, cardPrice, cardActions, buttonPrimary, buttonIcon } = productCardStyles()
     const ref = React.useRef<HTMLDivElement>(null)
     const isInView = useInView(ref, { once: true, margin: '-10% 0px' })
+    const isOutOfStock = (product.stock ?? 0) <= 0
 
     const getAnimationProps = (): React.ComponentProps<typeof motion.div> => {
         switch (animationVariant) {
@@ -77,6 +78,11 @@ export function ProductCard({
             {...animationProps}
             className={card()}
         >
+            {isOutOfStock && (
+                <div className="absolute top-4 right-4 z-10 bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+                    Out of Stock
+                </div>
+            )}
             <Link href={`/product/${product.id}`} className={cardImageWrapper()}>
                 <Image
                     src={product.image}
@@ -84,6 +90,7 @@ export function ProductCard({
                     fill
                     sizes={imageSizes}
                     className={cardImage()}
+                    style={{ opacity: isOutOfStock ? 0.5 : 1 }}
                 />
             </Link>
             <div className={cardContent()}>
@@ -99,12 +106,13 @@ export function ProductCard({
                 <p className={cardPrice()}>${product.price}</p>
                 <div className={cardActions()}>
                     <button
-                        onClick={(e) => onAdd(product, e)}
-                        className={buttonPrimary()}
-                        aria-label={`Add ${product.name} to bag`}
+                        onClick={(e) => !isOutOfStock && onAdd(product, e)}
+                        disabled={isOutOfStock}
+                        className={`${buttonPrimary()} ${isOutOfStock ? 'opacity-50 cursor-not-allowed bg-zinc-800 text-zinc-500 hover:bg-zinc-800' : ''}`}
+                        aria-label={isOutOfStock ? `${product.name} is out of stock` : `Add ${product.name} to bag`}
                     >
                         <ShoppingCart size={18} />
-                        Add
+                        {isOutOfStock ? 'Out of Stock' : 'Add'}
                     </button>
                     <Link
                         href={`/product/${product.id}`}

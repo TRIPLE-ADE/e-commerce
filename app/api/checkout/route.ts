@@ -47,7 +47,7 @@ export async function POST(req: Request) {
             );
         }
 
-        // Re-verify prices from Sanity
+        // Re-verify prices and stock from Sanity
         const productIds = items.map((item: { id: string }) => item.id);
         const sanityProducts = await client.fetch<Product[]>(PRODUCTS_BY_IDS_QUERY, { ids: productIds });
 
@@ -68,6 +68,33 @@ export async function POST(req: Request) {
                     productIds: missingProducts.map((p: { id: string }) => p.id)
                 },
                 { status: 404 }
+            );
+        }
+
+        // Validate stock availability
+        const outOfStockItems = items.filter((cartItem: { id: string; quantity: number }) => {
+            const product = sanityProducts.find(p => p.id === cartItem.id);
+            return !product || product.stock < cartItem.quantity || product.stock === 0;
+        });
+
+        if (outOfStockItems.length > 0) {
+            const outOfStockProducts = outOfStockItems.map((item: { id: string; quantity: number }) => {
+                const product = sanityProducts.find(p => p.id === item.id);
+                return {
+                    id: item.id,
+                    name: product?.name || 'Unknown',
+                    requested: item.quantity,
+                    available: product?.stock || 0
+                };
+            });
+
+            return NextResponse.json(
+                {
+                    error: 'One or more items are out of stock or insufficient stock available',
+                    code: 'OUT_OF_STOCK',
+                    items: outOfStockProducts
+                },
+                { status: 400 }
             );
         }
 

@@ -38,6 +38,17 @@ export async function POST(req: Request) {
         const items: OrderItemMetadata[] = JSON.parse(orderItems || '[]');
 
         try {
+            // Idempotency check: Check if order already exists with this stripeId
+            const existingOrder = await writeClient.fetch<{ _id: string } | null>(
+                `*[_type == "order" && stripeId == $stripeId][0]`,
+                { stripeId: session.id }
+            );
+
+            // If order already exists, skip processing (idempotent)
+            if (existingOrder) {
+                return NextResponse.json({ received: true, message: 'Order already processed' });
+            }
+
             // 1. Create Order in Sanity
             await writeClient.create({
                 _type: 'order',
@@ -57,8 +68,7 @@ export async function POST(req: Request) {
                 orderDate: new Date().toISOString(),
             });
 
-            // 2. Decrement Stock in Sanity
-            // We use transactional patches for atomicity
+            // 2. Decrement Stock in Sanity using transactional patches for atomicity
             const transaction = writeClient.transaction();
 
             items.forEach((item: OrderItemMetadata) => {
