@@ -1,4 +1,4 @@
-import { CartItem } from "@/store/use-cart";
+import type { CartItem } from '@/types/cart';
 
 export function mergeCarts(localItems: CartItem[], cloudItems: CartItem[]): CartItem[] {
     if (localItems.length === 0) return cloudItems;
@@ -20,6 +20,11 @@ export function mergeCarts(localItems: CartItem[], cloudItems: CartItem[]): Cart
         if (existing) {
             const localTimeStamp = localItem.updatedAt;
             const cloudTimeStamp = existing.updatedAt;
+
+            if (!localTimeStamp || !cloudTimeStamp) {
+                mergedMap.set(key, { ...localItem });
+                return;
+            }
 
             const localGreater = localTimeStamp > cloudTimeStamp;
             const equal = localTimeStamp === cloudTimeStamp;
