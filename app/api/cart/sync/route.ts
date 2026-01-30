@@ -10,19 +10,12 @@ export async function GET() {
         return NextResponse.json({ items: [] })
     }
 
-    const isRedisAvailable = Boolean(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
-    if (!isRedisAvailable) {
-        console.warn('Redis not available, returning empty cart');
-        return NextResponse.json({ items: [] })
-    }
-
     try {
         const items = await redis.get(`${CART_PREFIX}${userId}`)
         return NextResponse.json({ items: items || [] })
     } catch (error) {
-        console.error('Redis Fetch Error:', error);
         return NextResponse.json(
-            { items: [], error: 'Failed to fetch cart from cloud', code: 'REDIS_FETCH_ERROR' },
+            { items: [], error: `${ERROR_MESSAGES.SERVER_ERROR}: ${error}`, code: 'REDIS_FETCH_ERROR' },
             { status: 500 }
         )
     }
@@ -38,12 +31,6 @@ export async function POST(req: Request) {
         )
     }
 
-    const isRedisAvailable = Boolean(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
-    if (!isRedisAvailable) {
-        console.warn('Redis not available, cart sync skipped');
-        return NextResponse.json({ success: false, message: 'Cart sync unavailable' })
-    }
-
     try {
         let items;
         try {
@@ -57,9 +44,8 @@ export async function POST(req: Request) {
                 );
             }
         } catch (error) {
-            console.error('Failed to parse cart sync request body:', error);
             return NextResponse.json(
-                { error: ERROR_MESSAGES.VALIDATION_ERROR, code: 'INVALID_REQUEST' },
+                { error: `${ERROR_MESSAGES.VALIDATION_ERROR}: ${error}`, code: 'INVALID_REQUEST' },
                 { status: 400 }
             );
         }
@@ -69,9 +55,8 @@ export async function POST(req: Request) {
 
         return NextResponse.json({ success: true })
     } catch (error) {
-        console.error('Redis Sync Error:', error);
         return NextResponse.json(
-            { error: 'Failed to sync cart to cloud', code: 'REDIS_SYNC_ERROR' },
+            { error: `${ERROR_MESSAGES.SERVER_ERROR}: ${error}`, code: 'REDIS_SYNC_ERROR' },
             { status: 500 }
         )
     }

@@ -1,7 +1,8 @@
+import 'server-only';
 import { Redis } from '@upstash/redis'
 
 if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
-    console.warn('Upstash Redis environment variables are missing. Cloud Cart sync will be disabled.')
+    throw new Error('UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are missing from environment variables');
 }
 
 export const redis = new Redis({

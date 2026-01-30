@@ -40,9 +40,8 @@ export async function POST(req: Request) {
                 }
             }
         } catch (error) {
-            console.error('Failed to parse checkout request body:', error);
             return NextResponse.json(
-                { error: ERROR_MESSAGES.VALIDATION_ERROR, code: 'INVALID_REQUEST' },
+                { error: `${ERROR_MESSAGES.VALIDATION_ERROR}: ${error}`, code: 'INVALID_REQUEST' },
                 { status: 400 }
             );
         }
@@ -57,10 +56,10 @@ export async function POST(req: Request) {
         );
         
         if (missingProducts.length > 0) {
-            console.error('Products not found during checkout:', {
-                productIds: missingProducts.map((p: { id: string }) => p.id),
-                userId
-            });
+            // console.error('Products not found during checkout:', {
+            //     productIds: missingProducts.map((p: { id: string }) => p.id),
+            //     userId
+            // });
             return NextResponse.json(
                 {
                     error: ERROR_MESSAGES.PRODUCT_NOT_FOUND,
@@ -136,7 +135,7 @@ export async function POST(req: Request) {
         });
 
         if (!checkoutSession.url) {
-            console.error('Stripe session created but no URL returned:', { sessionId: checkoutSession.id });
+            // console.error('Stripe session created but no URL returned:', { sessionId: checkoutSession.id });
             return NextResponse.json(
                 { error: ERROR_MESSAGES.SERVER_ERROR, code: 'SESSION_CREATION_FAILED' },
                 { status: 500 }
@@ -145,9 +144,9 @@ export async function POST(req: Request) {
 
         return NextResponse.json({ url: checkoutSession.url });
     } catch (error: unknown) {
-        console.error('Checkout Error:', error);
+        // console.error('Checkout Error:', error);
         return NextResponse.json(
-            { error: ERROR_MESSAGES.SERVER_ERROR, code: 'CHECKOUT_ERROR' },
+            { error: `${ERROR_MESSAGES.SERVER_ERROR}: ${error}`, code: 'CHECKOUT_ERROR' },
             { status: 500 }
         );
     }

@@ -78,8 +78,7 @@ export async function POST(req: Request) {
             await transaction.commit();
 
             // 3. Clear Redis Cart
-            const isRedisAvailable = Boolean(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
-            if (clerkUserId && isRedisAvailable) {
+            if (clerkUserId) {
                 await redis.del(`${CART_PREFIX}${clerkUserId}`);
             }
         } catch (error) {

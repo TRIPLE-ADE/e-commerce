@@ -67,7 +67,6 @@ export async function POST(request: Request) {
     const secretKey = process.env.SANITY_IMPORT_SECRET_KEY
 
     if (!secretKey) {
-        console.error('SANITY_IMPORT_SECRET_KEY is not configured')
         return NextResponse.json(
             { success: false, error: 'Server configuration error' },
             { status: 500 }
@@ -113,7 +112,6 @@ export async function POST(request: Request) {
                     slug: { _type: 'slug', current: catSlug },
                 })
                 categoryIds.set(catTitle, created._id)
-                console.log(`Migrated category: ${catTitle}`)
             }
         }
 
@@ -167,7 +165,6 @@ export async function POST(request: Request) {
                 images: galleryRefs,
                 stock: product.stock,
             })
-            console.log(`Migrated product: ${product.name}`)
         }
 
         // 3. Migrate Collections
@@ -195,7 +192,6 @@ export async function POST(request: Request) {
                 layoutType: collection.layoutType,
                 releaseDate: collection.releaseDate
             })
-            console.log(`Migrated collection: ${collection.title}`)
         }
 
         return NextResponse.json({ success: true, message: 'Migration completed successfully' })
